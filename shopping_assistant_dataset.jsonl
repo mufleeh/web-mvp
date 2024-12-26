@@ -1,0 +1,39 @@
+{"prompt": "Show me all products.", "completion": "SELECT * FROM products;"}
+{"prompt": "Find me smartphones under $500.", "completion": "SELECT * FROM products WHERE category = 'Electronics' AND price < 500;"}
+{"prompt": "Show me products in the Electronics category.", "completion": "SELECT * FROM products WHERE category = 'Electronics';"}
+{"prompt": "What are the best-rated laptops?", "completion": "SELECT * FROM products WHERE category = 'Electronics' AND rating >= 4.5;"}
+{"prompt": "List all products on sale.", "completion": "SELECT * FROM products WHERE sale_price IS NOT NULL;"}
+{"prompt": "Do you have wireless headphones?", "completion": "SELECT * FROM products WHERE name LIKE '%wireless headphones%';"}
+{"prompt": "Find me red shoes in size 9.", "completion": "SELECT * FROM products WHERE name LIKE '%red shoes%' AND stock > 0;"}
+{"prompt": "Show all products with a rating of 4.5 or higher.", "completion": "SELECT * FROM products WHERE rating >= 4.5;"}
+{"prompt": "List products with free shipping.", "completion": "SELECT * FROM shipping_options WHERE shipping_type = 'Free';"}
+{"prompt": "Are there any new arrivals?", "completion": "SELECT * FROM products WHERE created_at >= CURDATE() - INTERVAL 30 DAY;"}
+{"prompt": "Show me top-selling items.", "completion": "SELECT p.name, SUM(op.quantity) AS total_sold FROM order_products op JOIN products p ON op.product_id = p.id GROUP BY p.id ORDER BY total_sold DESC LIMIT 10;"}
+{"prompt": "What are the latest gadgets?", "completion": "SELECT * FROM products WHERE category = 'Electronics' ORDER BY created_at DESC LIMIT 10;"}
+{"prompt": "Find products between $50 and $100.", "completion": "SELECT * FROM products WHERE price BETWEEN 50 AND 100;"}
+{"prompt": "What are the best deals in Fashion?", "completion": "SELECT * FROM promotions p JOIN products pr ON p.product_id = pr.id WHERE pr.category = 'Fashion';"}
+{"prompt": "Are there any eco-friendly products?", "completion": "SELECT * FROM products WHERE tags LIKE '%eco-friendly%';"}
+{"prompt": "List products available in stock.", "completion": "SELECT * FROM products WHERE stock > 0;"}
+{"prompt": "Show me trending accessories.", "completion": "SELECT * FROM products WHERE category = 'Accessories' ORDER BY rating DESC LIMIT 10;"}
+{"prompt": "What’s the cheapest item in Electronics?", "completion": "SELECT * FROM products WHERE category = 'Electronics' ORDER BY price ASC LIMIT 1;"}
+{"prompt": "Do you have gift cards?", "completion": "SELECT * FROM products WHERE name LIKE '%gift card%';"}
+{"prompt": "Show me all blue T-shirts.", "completion": "SELECT * FROM products WHERE name LIKE '%blue T-shirt%';"}
+{"prompt": "List my previous orders.", "completion": "SELECT * FROM orders WHERE user_id = 1;"}
+{"prompt": "What’s the status of my latest order?", "completion": "SELECT shipping_status FROM orders WHERE user_id = 1 ORDER BY order_date DESC LIMIT 1;"}
+{"prompt": "Show me orders made in the last month.", "completion": "SELECT * FROM orders WHERE user_id = 1 AND order_date >= CURDATE() - INTERVAL 1 MONTH;"}
+{"prompt": "How many items are in my last order?", "completion": "SELECT SUM(quantity) AS total_items FROM order_products WHERE order_id = (SELECT id FROM orders WHERE user_id = 1 ORDER BY order_date DESC LIMIT 1);"}
+{"prompt": "What’s the total cost of Order ID 123?", "completion": "SELECT total_price FROM orders WHERE id = 123;"}
+{"prompt": "Can I reorder items from my last order?", "completion": "SELECT product_id, quantity FROM order_products WHERE order_id = (SELECT id FROM orders WHERE user_id = 1 ORDER BY order_date DESC LIMIT 1);"}
+{"prompt": "What products are in Order ID 456?", "completion": "SELECT product_id, quantity FROM order_products WHERE order_id = 456;"}
+{"prompt": "Show me the details of my latest order.", "completion": "SELECT * FROM orders WHERE user_id = 1 ORDER BY order_date DESC LIMIT 1;"}
+{"prompt": "What’s the estimated delivery date for my last order?", "completion": "SELECT estimated_delivery_days FROM shipping_options WHERE product_id IN (SELECT product_id FROM order_products WHERE order_id = (SELECT id FROM orders WHERE user_id = 1 ORDER BY order_date DESC LIMIT 1));"}
+{"prompt": "Did I buy any smartphones recently?", "completion": "SELECT * FROM orders o JOIN order_products op ON o.id = op.order_id JOIN products p ON op.product_id = p.id WHERE o.user_id = 1 AND p.name LIKE '%smartphone%';"}
+{"prompt": "What’s available in the Home category?", "completion": "SELECT * FROM products WHERE category = 'Home';"}
+{"prompt": "List all items priced between $30 and $50.", "completion": "SELECT * FROM products WHERE price BETWEEN 30 AND 50;"}
+{"prompt": "Which products have less than 5 items in stock?", "completion": "SELECT * FROM products WHERE stock < 5;"}
+{"prompt": "List products I frequently buy.", "completion": "SELECT p.name, COUNT(op.product_id) AS purchase_count FROM order_products op JOIN products p ON op.product_id = p.id WHERE op.order_id IN (SELECT id FROM orders WHERE user_id = 1) GROUP BY op.product_id ORDER BY purchase_count DESC;"}
+{"prompt": "How many orders has each user made?", "completion": "SELECT user_id, COUNT(*) AS order_count FROM orders GROUP BY user_id;"}
+{"prompt": "What is the total revenue from all orders?", "completion": "SELECT SUM(total_price) AS total_revenue FROM orders;"}
+{"prompt": "Show products with discounts.", "completion": "SELECT * FROM products WHERE sale_price IS NOT NULL;"}
+{"prompt": "List all clearance items.", "completion": "SELECT * FROM products WHERE tags LIKE '%clearance%';"}
+{"prompt": "What’s on sale today?", "completion": "SELECT * FROM promotions WHERE start_date <= CURDATE() AND end_date >= CURDATE();"}

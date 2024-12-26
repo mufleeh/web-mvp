@@ -4,9 +4,11 @@ const express = require("express"); // Import express
 const cors = require("cors"); // Import CORS for cross-origin requests
 const path = require("path");
 const { Sequelize, QueryTypes } = require("sequelize"); // Import Sequelize for DB connection
-const axios = require("axios");
+const OpenAI = require("openai");
+const fs = require("fs");
 
 const app = express(); // Initialize the app
+const logger = require("./logger");
 
 app.use(cors()); // Enable CORS
 app.use(express.json()); // Parse JSON request bodies
@@ -30,6 +32,68 @@ sequelize
 
 // Serve static files from the 'images' directory
 app.use("/images", express.static(path.join(__dirname, "images")));
+
+// OpenAI Configuration
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY, // Ensure your .env file contains this key
+});
+
+// Fine-Tuning: Upload Dataset
+app.post("/api/fine-tune/upload", async (req, res) => {
+    try {
+        const response = await openai.files.create({
+            file: fs.createReadStream("validated_dataset.jsonl"),
+            purpose: "fine-tune",
+        });
+        res.json({ fileId: response.id });
+    } catch (error) {
+        console.error("Error uploading dataset:", error.response?.data || error.message);
+        res.status(500).json({ error: "Failed to upload dataset" });
+    }
+});
+
+// Fine-Tuning: Start Process
+app.post("/api/fine-tune/start", async (req, res) => {
+    const { fileId } = req.body;
+    try {
+        const response = await openai.fineTuning.jobs.create({
+            training_file: fileId,
+            model: "gpt-3.5-turbo",
+        });
+        res.json({ fineTuneId: response.id });
+    } catch (error) {
+        console.error("Error starting fine-tune:", error.response?.data || error.message);
+        res.status(500).json({ error: "Failed to start fine-tuning" });
+    }
+});
+
+// Fine-Tuning: Check Status
+app.get("/api/fine-tune/status/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+        const response = await openai.fineTuning.jobs.retrieve(id);
+        res.json(response);
+    } catch (error) {
+        console.error("Error checking fine-tune status:", error.response?.data || error.message);
+        res.status(500).json({ error: "Failed to check fine-tune status" });
+    }
+});
+
+// Fine-Tuning: Generate Completion
+app.post("/api/fine-tune/generate", async (req, res) => {
+    const { prompt } = req.body;
+    try {
+        const response = await openai.chat.completions.create({
+            model: "ft:gpt-3.5-turbo:your-fine-tuned-model-id", // Replace with your fine-tuned model ID
+            messages: [{ role: "user", content: prompt }],
+            max_tokens: 150,
+        });
+        res.json({ completion: response.choices[0].message.content });
+    } catch (error) {
+        console.error("Error generating completion:", error.response?.data || error.message);
+        res.status(500).json({ error: "Failed to generate completion" });
+    }
+});
 
 // API endpoint for fetching products
 app.get("/api/products", async (req, res) => {
@@ -57,58 +121,39 @@ app.get("/api/products", async (req, res) => {
 });
 
 // API endpoint for AI assistant
+
+
 app.post("/api/ai-assistant", async (req, res) => {
     const userInput = req.body.query;
-    console.log("Received Query:", userInput); // Log the query received from frontend
 
     try {
-        // OpenAI API Call
-        const response = await axios.post(
-            "https://api.openai.com/v1/chat/completions",
-            {
-                model: "gpt-3.5-turbo",
-                messages: [
-                    {
-                        role: "system",
-                        content:
-                            "You are an e-commerce assistant. When given a query, identify and extract the product category (e.g., 'electronics', 'fashion'), specific product name (e.g., 'smartphones', 'headphones'), and any price range mentioned. Respond in a JSON format like this: {\"category\": \"electronics\", \"product\": \"smartphones\", \"price\": \"100\"}. If a specific attribute is not mentioned, leave it empty."
-                    },
-                    { role: "user", content: userInput }
-                ]
-            },
-            {
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-                }
-            }
-        );
+        // Step 1: Generate SQL query using ChatGPT
+        const aiResponse = await openai.chat.completions.create({
+            model: "ft:gpt-3.5-turbo-0125:personal::AiUec3ix",
+            messages: [
+                { role: "system", content: "You are an SQL assistant." },
+                { role: "user", content: userInput }
+            ],
+            max_tokens: 150
+        });
 
-        console.log("OpenAI API Response:", response.data); // Log the API response
+        const sqlQuery = aiResponse.data.choices[0].message.content.trim();
+        console.log("Generated SQL Query:", sqlQuery);
 
-        const aiResponse = response.data.choices[0].message.content;
+        // Step 2: Execute the SQL query
+        const results = await sequelize.query(sqlQuery, { type: QueryTypes.SELECT });
+        console.log("Query Results:", results);
 
-        try {
-            // Parse the AI response as JSON
-            const extractedData = JSON.parse(aiResponse);
-
-            res.json({
-                response: aiResponse, // Full AI response
-                searchParams: {
-                    category: extractedData.category || "",
-                    product: extractedData.product || "",
-                    price: extractedData.price || ""
-                }
-            });
-        } catch (error) {
-            console.error("Error parsing AI response:", error);
-            res.status(500).json({ error: "Failed to process AI response" });
-        }
+        // Step 3: Return the results to the frontend
+        res.json({ results });
     } catch (error) {
-        console.error("Error with OpenAI API:", error.response?.data || error.message); // Log the exact error
-        res.status(500).json({ error: "Failed to process AI request" });
+        console.error("Error processing AI request:", error.response?.data || error.message);
+        res.status(500).json({ error: "Failed to process query." });
     }
 });
+
+
+
 
 // Start the server
 const PORT = process.env.PORT || 5000;
