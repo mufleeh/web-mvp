@@ -5,31 +5,33 @@ import BASE_URL from "../config";
 
 const ProductList = ({ searchQuery, category }) => {
     const [products, setProducts] = useState([]);
-    const [loading, setLoading] = useState(false); // Add loading state
-    const [error, setError] = useState(""); // Add error state
+    const [loading, setLoading] = useState(false); // Loading state
+    const [error, setError] = useState(""); // Error state
 
-    useEffect(() => {
-        const fetchProducts = async () => {
-            if (!searchQuery && !category) return; // Avoid unnecessary API calls
+	useEffect(() => {
+		const fetchProducts = async () => {
+			setLoading(true);
+			setError("");
 
-            setLoading(true); // Start loading
-            setError(""); // Reset error state
+			try {
+				const url = searchQuery || category
+					? `${BASE_URL}/api/products?q=${encodeURIComponent(searchQuery)}&category=${encodeURIComponent(category)}`
+					: `${BASE_URL}/api/products`;
 
-            try {
-                const response = await axios.get(
-                    `${BASE_URL}/api/products?q=${encodeURIComponent(searchQuery)}&category=${encodeURIComponent(category)}`
-                );
-                setProducts(response.data);
-            } catch (error) {
-                console.error("Error fetching products:", error);
-                setError("Failed to fetch products. Please try again.");
-            } finally {
-                setLoading(false); // Stop loading
-            }
-        };
+				const response = await axios.get(url);
+				//console.log("API Response Products:", response.data); // Debugging
+				setProducts(response.data); // Update products
+			} catch (error) {
+				console.error("Error fetching products:", error);
+				setError(error.response?.data?.error || "Failed to fetch products. Please try again.");
+			} finally {
+				setLoading(false);
+			}
+		};
 
-        fetchProducts();
-    }, [searchQuery, category]);
+		fetchProducts();
+	}, [searchQuery, category]);
+
 
     return (
         <div style={{ display: "flex", justifyContent: "center", padding: "20px" }}>
@@ -62,17 +64,17 @@ const ProductList = ({ searchQuery, category }) => {
                         >
                             <img
                                 src={`${BASE_URL}${product.image_url}`} // Prepend BASE_URL to image_url
-                                alt={product.name}
+                                alt={product.name || "Product Image"}
                                 style={{ width: "100%", height: "150px", objectFit: "cover" }}
                                 onError={(e) => (e.target.src = `${BASE_URL}/images/default.jpg`)} // Handle broken image URLs
                             />
-                            <h3 style={{ color: "#007bff" }}>{product.name}</h3>
-                            <p style={{ color: "#555" }}>{product.description}</p>
-                            <p style={{ color: "#28a745", fontWeight: "bold" }}>${product.price}</p>
+                            <h3 style={{ color: "#007bff" }}>{product.name || "Unnamed Product"}</h3>
+                            <p style={{ color: "#555" }}>{product.description || "No description available."}</p>
+                            <p style={{ color: "#28a745", fontWeight: "bold" }}>${product.price || "N/A"}</p>
                         </div>
                     ))
                 ) : (
-                    <div>No products found.</div>
+                    <p>No products match your search criteria.</p>
                 )}
             </div>
         </div>

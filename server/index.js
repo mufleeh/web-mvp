@@ -97,28 +97,30 @@ app.post("/api/fine-tune/generate", async (req, res) => {
 
 // API endpoint for fetching products
 app.get("/api/products", async (req, res) => {
-    const { q = "", price = null } = req.query;
+    const { q = "", category = "" } = req.query;
 
     try {
-        // Query the database to fetch products based on filters
         const query = `
-            SELECT * FROM products
-            WHERE 
-                (name LIKE :query OR description LIKE :query OR category LIKE :query)
-                ${price ? "AND price <= :price" : ""}
+            SELECT id, name, description, price, image_url, category
+            FROM products
+            WHERE
+                (:query = '' OR (name LIKE :query OR description LIKE :query OR category LIKE :query))
+                AND (:category = '' OR category = :category)
         `;
 
         const products = await sequelize.query(query, {
-            replacements: { query: `%${q}%`, price: price ? parseFloat(price) : null },
+            replacements: { query: `%${q}%`, category },
             type: QueryTypes.SELECT,
         });
 
         res.json(products);
     } catch (error) {
         console.error("Error fetching products:", error);
-        res.status(500).json({ error: "Failed to fetch products" });
+        res.status(500).json({ error: "Failed to fetch products." });
     }
 });
+
+
 
 // API endpoint for AI assistant
 

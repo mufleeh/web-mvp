@@ -3,48 +3,46 @@ import "./App.css";
 import SpeechToText from "./components/SpeechToText";
 import ProductList from "./components/ProductList";
 import ErrorBoundary from "./components/ErrorBoundary";
-import axios from "axios"; // Import axios for API calls
+import axios from "axios";
 
 function App() {
-    const [searchQuery, setSearchQuery] = useState(""); // State for voice-based query
+    const [searchQuery, setSearchQuery] = useState(""); // State for user query
     const [selectedCategory, setSelectedCategory] = useState(""); // State for category filter
-    const [products, setProducts] = useState([]); // State to hold fetched products
-    const [loading, setLoading] = useState(false); // State for loading indicator
+    const [products, setProducts] = useState([]); // State for product list
     const [error, setError] = useState(""); // State for error messages
 
-    // Fetch products from the server based on the query and category
+    // Fetch products based on searchQuery or category
     useEffect(() => {
         const fetchProducts = async () => {
-            if (!searchQuery) return; // Avoid making API calls with empty query
+            const queryParam = searchQuery || selectedCategory
+                ? `?q=${encodeURIComponent(searchQuery)}&category=${encodeURIComponent(selectedCategory)}`
+                : "";
 
-            setLoading(true);
-            setError("");
+            const url = `http://localhost:5000/api/products${queryParam}`;
 
             try {
-                const response = await axios.post("http://localhost:5000/api/ai-assistant", {
-                    query: searchQuery,
-                });
-
-                setProducts(response.data.results); // Update products with backend response
+                const response = await axios.get(url);
+                console.log("Fetched products:", response.data); // Debugging
+                setProducts(response.data);
             } catch (err) {
-                setError("Failed to fetch products. Please try again.");
                 console.error("Error fetching products:", err);
-            } finally {
-                setLoading(false);
+                setError("Failed to load products. Please try again.");
             }
         };
 
         fetchProducts();
-    }, [searchQuery]);
+    }, [searchQuery, selectedCategory]); // Fetch products whenever searchQuery or selectedCategory changes
 
-    // Handle transcription result from SpeechToText component
+    // Handle transcription result from SpeechToText
     const handleTranscription = (transcription) => {
-        setSearchQuery(transcription); // Update the query state with the transcription
+        console.log("Transcribed query:", transcription); // Debugging
+        setSearchQuery(transcription); // Update the query state with transcribed text
     };
 
     // Handle category selection
     const handleCategoryChange = (category) => {
-        setSelectedCategory(category); // Update selected category state
+        console.log("Selected category:", category); // Debugging
+        setSelectedCategory(category); // Update selected category
     };
 
     return (
@@ -69,14 +67,9 @@ function App() {
                         ))}
                     </div>
 
-                    {/* Loading Indicator */}
-                    {loading && <p>Loading products...</p>}
-
-                    {/* Error Message */}
-                    {error && <p className="error">{error}</p>}
-
                     {/* ProductList Component */}
-                    <ProductList products={products} category={selectedCategory} />
+                    <ProductList searchQuery={searchQuery} category={selectedCategory} />
+                    {error && <p className="error">{error}</p>}
                 </header>
             </div>
         </ErrorBoundary>
